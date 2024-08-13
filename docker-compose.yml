@@ -1,0 +1,12 @@
+services:
+  app:
+    build: .
+    environment:
+      - FRIGATE_API_URL=http://192.168.1.7:5000
+      - TELEGRAM_BOT_TOKEN=7350230894:AAHtD9_qDExpJY8CciWfD--x3yOj83nGBIs
+      - TELEGRAM_CHAT_ID=-4265139484
+    volumes:
+      - .:/app
+      - ./logs:/app/logs
+    ports:
+      - "3000:3000"

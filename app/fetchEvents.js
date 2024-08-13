@@ -32,5 +32,3 @@ const fetchEvents = async () => {
 };
 
 module.exports = { fetchEvents, fetchEvent };
-
-module.exports = { fetchEvents, fetchEvent };

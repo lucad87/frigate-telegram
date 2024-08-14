@@ -1,0 +1,17 @@
+services:
+  app:
+    build: .
+    environment:
+      - FRIGATE_URL=<your frigate url>
+      - FRIGATE_MEDIA_URL=<your_frigate_media_url> # (optional) Set to the public URL of your Frigate medias
+      - TELEGRAM_BOT_TOKEN=<your_telegram_bot_token>
+      - TELEGRAM_CHAT_ID=-<your_telegram_chat_id>
+      - CAMERA=<your_camera_name>
+      - ZONES=<your_zone_name>
+      - LABEL=<your_label_name>
+      - DEBUG=false # (optional) Set to true to enable debug logging
+    volumes:
+      - .:/app
+      - ./logs:/app/logs
+    ports:
+      - "3000:3000"

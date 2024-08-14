@@ -5,6 +5,7 @@ services:
       - FRIGATE_API_URL=http://192.168.1.7:5000
       - TELEGRAM_BOT_TOKEN=7350230894:AAHtD9_qDExpJY8CciWfD--x3yOj83nGBIs
       - TELEGRAM_CHAT_ID=-4265139484
+      - DEBUG=false # (optional) Set to true to enable debug logging
     volumes:
       - .:/app
       - ./logs:/app/logs

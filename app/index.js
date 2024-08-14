@@ -1,27 +1,14 @@
 const logger = require('./logger.js');
 const events = require('./processEvents.js');
 
-// Function to process a single event
-const handleSingleEvent = async (eventId) => {
+function pollEvents() {
     try {
-        await events.processEvent(eventId);
+        logger.info('Starting event polling...');
+        events.processEvents();
+        logger.info('Event polling completed successfully.');
     } catch (error) {
-        logger.error('Error processing single event:', error);
+        logger.error('Error occurred during event polling:', error);
     }
-};
+}
 
-// Function to process multiple events
-const handleMultipleEvents = async () => {
-    try {
-        await events.processEvents();
-    } catch (error) {
-        logger.error('Error processing multiple events:', error);
-    }
-};
-
-// Single event example for testing
-// const eventId = '1723532135.282072-4fccyg';
-// handleSingleEvent(eventId);
-
-// Multiple events example
-setInterval(handleMultipleEvents, 60000); // poll every 60 seconds
+setInterval(pollEvents, 60000); // poll every 60 seconds

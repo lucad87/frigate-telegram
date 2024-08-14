@@ -20,7 +20,7 @@ process.env["NTBA_FIX_350"] = 1; // Fix for the warning above
 const sendMessage = (eventMessage) => {
     bot.sendMessage(chatId, eventMessage)
         .then(() => {
-            logger.log('Message sent to Telegram');
+            logger.info('Message sent to Telegram');
         })
         .catch((error) => {
             logger.error('Error sending message to Telegram:', error);

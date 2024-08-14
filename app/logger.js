@@ -1,6 +1,7 @@
 const { createLogger, format, transports } = require('winston');
 const path = require('path');
 
+const isDebug = process.env.DEBUG || 'false';
 
 const logFilePath = path.join(__dirname, '../logs/app.log');
 
@@ -15,5 +16,13 @@ const logger = createLogger({
         new transports.Console() // Add this line to log to the console
     ]
 });
+
+const originalInfo = logger.info;
+
+logger.info = function (message) {
+    if (process.env.DEBUG === 'true') {
+        originalInfo.call(logger, message);
+    }
+};
 
 module.exports = logger;

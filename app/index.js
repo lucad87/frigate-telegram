@@ -20,8 +20,8 @@ const handleMultipleEvents = async () => {
 };
 
 // Single event example for testing
-const eventId = '1723532135.282072-4fccyg';
-handleSingleEvent(eventId);
+// const eventId = '1723532135.282072-4fccyg';
+// handleSingleEvent(eventId);
 
 // Multiple events example
-// setInterval(handleMultipleEvents, 60000);
+setInterval(handleMultipleEvents, 60000); // poll every 60 seconds

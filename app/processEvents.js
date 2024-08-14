@@ -3,10 +3,11 @@ const telegram = require('./telegramBot.js');
 const epochToDateTime = require('./utils.js');
 const logger = require('./logger.js');
 const util = require('util');
+const config = require('../config/config.js');
 
-const processEvent = async (eventId) => {
+const processSingleEvent = async (eventId) => {
     try {
-        const event = await frigateApi.fetchEvent(eventId);
+        const event = await frigateApi.fetchSingleEvent(eventId);
 
         if (event === null) {
             throw new Error('Fetched event is null');
@@ -18,7 +19,7 @@ const processEvent = async (eventId) => {
         const eventMessage = util.format('%s\nCamera: %s\n%s\n%s\n%s', 
             event.id, 
             event.camera,
-            `https://frigate.lucad.cloud/api/events/${event.id}/thumbnail.jpg`, 
+            `${config.frigateMediaUrl}/api/events/${event.id}/thumbnail.jpg`, 
             epochToDateTime(event.start_time), 
             epochToDateTime(event.end_time));
 
@@ -36,9 +37,9 @@ const processEvent = async (eventId) => {
     }
 };
 
-const processEvents = async () => {
+const processMultipleEvents = async () => {
     try {
-        const events = await frigateApi.fetchEvents();
+        const events = await frigateApi.fetchMultipleEvents();
 
         if (events && events.length > 0) {
             events.forEach(event => {
@@ -49,7 +50,7 @@ const processEvents = async () => {
                 const eventMessage = util.format('%s\nCamera: %s\n%s\n%s\n%s', 
                     event.id, 
                     event.camera,
-                    `https://frigate.lucad.cloud/api/events/${event.id}/thumbnail.jpg`, 
+                    `${config.frigateMediaUrl}/api/events/${event.id}/thumbnail.jpg`, 
                     epochToDateTime(event.start_time), 
                     epochToDateTime(event.end_time)
                 );
@@ -69,4 +70,4 @@ const processEvents = async () => {
     }
 };
 
-module.exports = { processEvent, processEvents };
+module.exports = { processSingleEvent, processMultipleEvents };

@@ -4,7 +4,7 @@ const events = require('./processEvents.js');
 function pollEvents() {
     try {
         logger.info('Starting event polling...');
-        events.processEvents();
+        events.processMultipleEvents();
         logger.info('Event polling completed successfully.');
     } catch (error) {
         logger.error('Error occurred during event polling:', error);

@@ -2,9 +2,13 @@ services:
   app:
     build: .
     environment:
-      - FRIGATE_API_URL=http://192.168.1.7:5000
+      - FRIGATE_URL=http://frigate.local
+      - FRIGATE_MEDIA_URL=http://frigate.local # (optional) Set to the public URL of your Frigate medias
       - TELEGRAM_BOT_TOKEN=7350230894:AAHtD9_qDExpJY8CciWfD--x3yOj83nGBIs
       - TELEGRAM_CHAT_ID=-4265139484
+      - CAMERA=terrazza
+      - ZONES=danger
+      - LABEL=person
       - DEBUG=false # (optional) Set to true to enable debug logging
     volumes:
       - .:/app

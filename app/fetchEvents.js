@@ -12,22 +12,32 @@ const fetchEvent = async (eventId) => {
     try {
         const response = await axios.get(`${frigateApiUrl}/api/events/${eventId}`);
 
-        logger.info(`Fetched the event ${eventId} from Frigate:`, response.data);
+        if (response && response !== '') {
+            logger.info(`Fetched the event ${eventId} from Frigate`);
+        }
 
         return response.data; // No need to parse response.data
     } catch (error) {
         logger.error('Error fetching the event from Frigate:', error);
-        return null;
+        throw new Error('Error fetching the event from Frigate:', error);
     }
 };
 
 const fetchEvents = async () => {
     try {
-        const response = await get(`${frigateApiUrl}/api/events`);
-        return JSON.parse(response.data);
+        const actual_dateTime = Date.now();
+        const after_value = Math.floor((actual_dateTime - 60000) / 1000) // 60 seconds ago
+
+        const response = await axios.get(`${frigateApiUrl}/api/events?camera=terrazza&zones=danger&label=person&after=${after_value}`);
+
+        if (response && response !== '') {
+            logger.info(`Fetched an event from Frigate`);
+        }
+
+        return response.data;
     } catch (error) {
         logger.error('Error fetching events from Frigate:', error);
-        return null;
+        throw new Error('Error fetching events from Frigate:', error);
     }
 };
 

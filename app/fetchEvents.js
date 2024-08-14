@@ -30,7 +30,7 @@ const fetchEvents = async () => {
 
         const response = await axios.get(`${frigateApiUrl}/api/events?camera=terrazza&zones=danger&label=person&after=${after_value}`);
 
-        if (response && response !== '') {
+        if (response && response !== '' && response.data && response.data.length > 0) {
             logger.info(`Fetched an event from Frigate`);
         }
 

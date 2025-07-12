@@ -1,6 +1,6 @@
 {
   "name": "frigate-telegram",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "A simple Node.js app to send Frigate's events to Telegram",
   "main": "app/index.js",
   "dependencies": {

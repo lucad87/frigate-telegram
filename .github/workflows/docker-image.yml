@@ -5,27 +5,47 @@ on:
     branches: [ "master" ]
     
 jobs:
-
   build:
-
     runs-on: ubuntu-latest
-
     steps:
     - name: Check out the repo
       uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
 
     - name: Login to Dockerhub
       uses: docker/login-action@v3
       with:
-       username: ${{ secrets.DOCKERHUB_USERNAME }}
-       password: ${{ secrets.DOCKERHUB_TOKEN }}
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_TOKEN }}
 
     - name: Build and push to Dockerhub
       id: docker_build
       uses: docker/build-push-action@v5
       with:
-       push: true
-       tags: lucad87/frigate-telegram:latest
-       
+        push: true
+        tags: lucad87/frigate-telegram:latest
+
     - name: Image digest
       run: echo ${{ steps.docker_build.outputs.digest }}
+
+    - name: Extract version from package.json
+      id: get_version
+      run: echo "version=$(jq -r .version package.json)" >> "$GITHUB_OUTPUT"
+
+    - name: Set up Git user
+      run: |
+        git config user.email "github-actions[bot]@users.noreply.github.com"
+        git config user.name "github-actions[bot]"
+
+    - name: Create new git tag
+      if: github.ref == 'refs/heads/master'
+      env:
+        TAG: v${{ steps.get_version.outputs.version }}
+      run: |
+        if ! git rev-parse "$TAG" >/dev/null 2>&1; then
+          git tag "$TAG"
+          git push origin "$TAG"
+        else
+          echo "Tag $TAG already exists"
+        fi

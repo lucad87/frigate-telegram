@@ -7,14 +7,18 @@ const logger = require('./logger.js');
 
 const processEvent = async (event) => {
     try {
-        logger.info(`Event ${event.id} received`);
+        if (telegram.getNotificationsEnabled()) { // Check if notifications are enabled
+            logger.info(`Event ${event.id} received`);
 
-        const eventMessage = formatEventMessage(event, frigate.mediaUrl);
-        const thumbnailBuffer = Buffer.from(event.thumbnail, 'base64');
+            const eventMessage = formatEventMessage(event, frigate.mediaUrl);
+            const thumbnailBuffer = Buffer.from(event.thumbnail, 'base64');
 
-        telegram.sendPhoto(eventMessage, thumbnailBuffer, event.id);
+            telegram.sendPhoto(eventMessage, thumbnailBuffer, event.id);
 
-        logger.info(`Event ${event.id} sent to Telegram`);
+            logger.info(`Event ${event.id} sent to Telegram`);
+        } else {
+            logger.info(`Notifications are disabled. Skipping event ${event.id}.`);
+        }
     } catch (error) {
         logger.error(`Error processing event ${event.id}`, error);
     }

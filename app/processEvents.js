@@ -32,7 +32,7 @@ const processEvent = async (event) => {
                         logger.warn(`Failed to fetch thumbnail for event ${event.id} (attempt ${attempt}/${maxRetries}), retrying in ${retryDelay}ms...`);
                         await new Promise(resolve => setTimeout(resolve, retryDelay));
                     } else {
-                        logger.error(`Failed to fetch thumbnail for event ${event.id} after ${maxRetries} attempts. Event will not be sent.`);
+                        logger.error(`Failed to fetch thumbnail for event ${event.id} after ${maxRetries} attempts. Event will not be sent.`, thumbnailError);
                     }
                 }
             }

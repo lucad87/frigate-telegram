@@ -11,11 +11,40 @@ const processEvent = async (event) => {
             logger.info(`Event ${event.id} received`);
 
             const eventMessage = formatEventMessage(event, frigate.mediaUrl);
-            const thumbnailBuffer = Buffer.from(event.thumbnail, 'base64');
+            
+            // Frigate no longer includes thumbnails in the events response by default
+            // We need to fetch it from the dedicated thumbnail endpoint
+            // Retry a few times in case the thumbnail is not immediately available
+            const axios = require('axios');
+            const maxRetries = 3;
+            const retryDelay = 1000; // 1 second
+            let thumbnailBuffer = null;
 
-            telegram.sendPhoto(eventMessage, thumbnailBuffer, event.id);
+            for (let attempt = 1; attempt <= maxRetries; attempt++) {
+                try {
+                    const thumbnailUrl = `${frigate.url}/api/events/${event.id}/thumbnail.jpg`;
+                    const response = await axios.get(thumbnailUrl, { responseType: 'arraybuffer' });
+                    thumbnailBuffer = Buffer.from(response.data);
+                    logger.info(`Thumbnail fetched for event ${event.id} on attempt ${attempt}`);
+                    break; // Success, exit the retry loop
+                } catch (thumbnailError) {
+                    if (attempt < maxRetries) {
+                        logger.warn(`Failed to fetch thumbnail for event ${event.id} (attempt ${attempt}/${maxRetries}), retrying in ${retryDelay}ms...`);
+                        await new Promise(resolve => setTimeout(resolve, retryDelay));
+                    } else {
+                        logger.error(`Failed to fetch thumbnail for event ${event.id} after ${maxRetries} attempts. Event will not be sent.`, thumbnailError);
+                    }
+                }
+            }
 
-            logger.info(`Event ${event.id} sent to Telegram`);
+            if (thumbnailBuffer) {
+                telegram.sendPhoto(eventMessage, thumbnailBuffer, event.id);
+                logger.info(`Event ${event.id} sent to Telegram`);
+            } else {
+                logger.warn(`Could not retrieve thumbnail for event ${event.id} after ${maxRetries} attempts. Sending text-only notification.`);
+                telegram.sendMessage(eventMessage, event.id);
+                logger.info(`Event ${event.id} sent to Telegram without thumbnail`);
+            }
         } else {
             logger.info(`Notifications are disabled. Skipping event ${event.id}.`);
         }

@@ -41,7 +41,9 @@ const processEvent = async (event) => {
                 telegram.sendPhoto(eventMessage, thumbnailBuffer, event.id);
                 logger.info(`Event ${event.id} sent to Telegram`);
             } else {
-                logger.error(`Skipping event ${event.id} - could not retrieve thumbnail`);
+                logger.warn(`Could not retrieve thumbnail for event ${event.id} after ${maxRetries} attempts. Sending text-only notification.`);
+                telegram.sendMessage(eventMessage, event.id);
+                logger.info(`Event ${event.id} sent to Telegram without thumbnail`);
             }
         } else {
             logger.info(`Notifications are disabled. Skipping event ${event.id}.`);

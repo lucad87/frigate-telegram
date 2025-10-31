@@ -10,12 +10,17 @@ const getEpochTimestampFromSecondsAgo = (seconds) => {
 };
 
 const formatEventMessage = (event, frigateMediaUrl) => {
-    return util.format('%s\n%s\n%s\n%s',
+    // For the Telegram message, use the media URL without credentials
+    // Telegram may block links with credentials in them
+    // Add padding=30 parameter to include 30 seconds before and after the event
+    const clipUrl = `${frigateMediaUrl}/api/events/${event.id}/clip.mp4?padding=30`;
+
+    return util.format('%s\n%s\n%s\n%s\n%s',
         '⚠️⚠️ <b>EVENT DETECTED</b> ⚠️⚠️', 
         `<pre>${event.id}</pre>`, 
-        `🎥 <a href="${frigateMediaUrl}/api/events/${event.id}/clip.mp4"><b>VIDEO LINK</b></a> 🎥`, 
-        `<pre><i>${epochToDateTime(event.start_time)}</i>`, 
-        `<i>${epochToDateTime(event.end_time)}</i></pre>`,
+        `🎥 <a href="${clipUrl}">VIDEO LINK</a> 🎥`, 
+        `<pre><i>${epochToDateTime(event.start_time)}</i></pre>`,
+        `<pre><i>${epochToDateTime(event.end_time)}</i></pre>`
     );
 };
 

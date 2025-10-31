@@ -52,6 +52,63 @@ const sendPhoto = (eventMessage, photoBuffer, eventId) => {
     }
 };
 
+const sendAnimation = (eventMessage, animationBuffer, eventId) => {
+    const options = {
+        caption: eventMessage,
+        parse_mode: 'HTML'
+    };
+
+    const fileOptions = {
+        filename: `${eventId}.gif`,
+        contentType: 'image/gif'
+    };
+
+    try {
+        bot.sendAnimation(chatId, animationBuffer, options, fileOptions);
+    } catch (error) {
+        logger.error('Error sending message and animation to Telegram:', error);
+    }
+};
+
+const sendPhotoAndAnimation = async (eventMessage, thumbnailBuffer, animationBuffer, eventId) => {
+    try {
+        // Send the thumbnail first with the event message
+        const photoOptions = {
+            caption: eventMessage,
+            parse_mode: 'HTML'
+        };
+
+        const photoFileOptions = {
+            filename: `${eventId}.jpg`,
+            contentType: 'image/jpeg'
+        };
+
+        await bot.sendPhoto(chatId, thumbnailBuffer, photoOptions, photoFileOptions);
+
+        // Then send the animation GIF separately (without caption to avoid duplication)
+        const animationFileOptions = {
+            filename: `${eventId}.gif`,
+            contentType: 'image/gif'
+        };
+
+        await bot.sendAnimation(chatId, animationBuffer, {}, animationFileOptions);
+    } catch (error) {
+        logger.error('Error sending photo and animation to Telegram:', error);
+    }
+};
+
+const sendMessage = (eventMessage, eventId) => {
+    const options = {
+        parse_mode: 'HTML'
+    };
+
+    try {
+        bot.sendMessage(chatId, eventMessage, options);
+    } catch (error) {
+        logger.error('Error sending message to Telegram:', error);
+    }
+};
+
 const getNotificationsEnabled = () => notificationsEnabled;
 
-module.exports = { sendPhoto, getNotificationsEnabled };
+module.exports = { sendPhoto, sendAnimation, sendPhotoAndAnimation, sendMessage, getNotificationsEnabled };

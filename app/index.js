@@ -1,3 +1,6 @@
+// Load environment variables from .env file
+require('dotenv').config();
+
 const { processEvents, processFrigateStatus } = require('./processEvents.js');
 const logger = require('./logger.js');
 const { polling } = require('../config/settings.js').config;

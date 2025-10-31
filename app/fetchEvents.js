@@ -7,14 +7,24 @@ const fetchEvents = async () => {
     try {
         const url = `${frigate.url}/api/events`;
 
-        const response = await axios.get(url, { // ?camera=${config.camera}&zones=${config.zones}&label=${config.label}&after=${after_value}`;
+        const axiosConfig = {
             params: {
                 camera: frigate.camera,
                 zones: frigate.zones,
                 label: frigate.label,
                 after: getEpochTimestampFromSecondsAgo(polling.interval)
             }
-        });
+        };
+
+        // Add authentication if credentials are provided
+        if (frigate.username && frigate.password) {
+            axiosConfig.auth = {
+                username: frigate.username,
+                password: frigate.password
+            };
+        }
+
+        const response = await axios.get(url, axiosConfig);
 
         return response.data;
     } catch (error) {

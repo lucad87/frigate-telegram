@@ -14,7 +14,8 @@ This project is a Telegram bot integration for Frigate, an open-source NVR (Netw
 - [License](#license)
 
 ## About
-The application is written in Node.js and polls the Frigate API to fetch new events. When a new event is detected, it is forwarded to Telegram, including several event details, the event clip url and a thumbnail.
+The application is written in Node.js and polls the Frigate API to fetch new events. When a new event is detected, it is forwarded to Telegram, including event details, a clickable video link with 30 seconds padding, a static thumbnail, and an animated preview GIF.
+
 This project aims to retrieve events from Frigate using its API without relying on external tools like Home Assistant. MQTT is not supported.
 
 The application polls Frigate every 60 seconds -by default- to fetch new alerts. The GET request to the Frigate API retrieves events from the last 60 seconds, filtered by the parameters specified in the `docker-compose` file (label, camera, and zones). You can customize it with `POLLING_INTERVAL`: it will set the same value for both application `polling interval` and frigate `after`.
@@ -24,8 +25,15 @@ https://hub.docker.com/r/lucad87/frigate-telegram
 
 ## Features
 - **Real-time Notifications**: Receive instant alerts on your Telegram chat when Frigate detects specified objects.
+- **Rich Media**: Each notification includes:
+  - Event details (ID, timestamps)
+  - Clickable video link with 30 seconds padding before/after the event
+  - Static thumbnail image
+  - Animated preview GIF
+- **Authentication Support**: Secure access to Frigate API using username and password.
 - **Notification Toggle**: Enable or disable notifications directly via Telegram commands (`/enable_notifications` and `/disable_notifications`).
 - **Customizable**: Configure the bot to monitor specific cameras, zones, and object labels.
+- **Retry Logic**: Automatically retries fetching media if not immediately available.
 - **Debugging**: Enable debug logging for troubleshooting and development purposes.
 - **Media URL Support**: Optionally set a public URL for accessing Frigate media files.
 
@@ -37,6 +45,8 @@ To get the Frigate-Telegram bot up and running, follow these steps:
 These variables are essential for the bot's operation and should be configured in your `docker-compose.yml` file:
 - `FRIGATE_URL`: The URL of your Frigate instance (e.g., `http://192.168.1.7:5000`).
 - `FRIGATE_MEDIA_URL`: (Optional) The public URL of your Frigate media files (e.g., `https://your-media-frigate-instance.com`).
+- `FRIGATE_USERNAME`: (Optional) Username for Frigate authentication. Required if your Frigate instance has authentication enabled.
+- `FRIGATE_PASSWORD`: (Optional) Password for Frigate authentication. Required if your Frigate instance has authentication enabled.
 - `TELEGRAM_BOT_TOKEN`: The token for your Telegram bot.
 - `TELEGRAM_CHAT_ID`: The chat ID where notifications will be sent.
 - `CAMERA`: The name of the frigate camera to monitor.
@@ -60,6 +70,8 @@ services:
     environment:
       - FRIGATE_URL=<your-frigate-instance-url>
       - FRIGATE_MEDIA_URL=<your-public-media-frigate-instance-url> # (optional) It fallbacks on FRIGATE_URL if not specified
+      - FRIGATE_USERNAME=<your-frigate-username> # (optional) Required if Frigate has authentication enabled
+      - FRIGATE_PASSWORD=<your-frigate-password> # (optional) Required if Frigate has authentication enabled
       - TELEGRAM_BOT_TOKEN=<your-telegram-token>
       - TELEGRAM_CHAT_ID=<your-telegram-chat-id>
       - CAMERA=<frigate-camera>

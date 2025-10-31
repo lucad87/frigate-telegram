@@ -12,18 +12,31 @@ const processEvent = async (event) => {
 
             const eventMessage = formatEventMessage(event, frigate.mediaUrl);
             
-            // Frigate no longer includes thumbnails in the events response by default
-            // We need to fetch it from the dedicated thumbnail endpoint
-            // Retry a few times in case the thumbnail is not immediately available
+            // Fetch both the thumbnail and preview GIF from Frigate
+            // Retry a few times in case they are not immediately available
             const axios = require('axios');
             const maxRetries = 3;
             const retryDelay = 1000; // 1 second
             let thumbnailBuffer = null;
+            let previewBuffer = null;
 
+            // Setup axios config with authentication if credentials are provided
+            const axiosConfig = { 
+                responseType: 'arraybuffer'
+            };
+            
+            if (frigate.username && frigate.password) {
+                axiosConfig.auth = {
+                    username: frigate.username,
+                    password: frigate.password
+                };
+            }
+
+            // Fetch thumbnail
             for (let attempt = 1; attempt <= maxRetries; attempt++) {
                 try {
                     const thumbnailUrl = `${frigate.url}/api/events/${event.id}/thumbnail.jpg`;
-                    const response = await axios.get(thumbnailUrl, { responseType: 'arraybuffer' });
+                    const response = await axios.get(thumbnailUrl, axiosConfig);
                     thumbnailBuffer = Buffer.from(response.data);
                     logger.info(`Thumbnail fetched for event ${event.id} on attempt ${attempt}`);
                     break; // Success, exit the retry loop
@@ -32,18 +45,43 @@ const processEvent = async (event) => {
                         logger.warn(`Failed to fetch thumbnail for event ${event.id} (attempt ${attempt}/${maxRetries}), retrying in ${retryDelay}ms...`);
                         await new Promise(resolve => setTimeout(resolve, retryDelay));
                     } else {
-                        logger.error(`Failed to fetch thumbnail for event ${event.id} after ${maxRetries} attempts. Event will not be sent.`, thumbnailError);
+                        logger.error(`Failed to fetch thumbnail for event ${event.id} after ${maxRetries} attempts.`, thumbnailError);
                     }
                 }
             }
 
-            if (thumbnailBuffer) {
+            // Fetch preview GIF
+            for (let attempt = 1; attempt <= maxRetries; attempt++) {
+                try {
+                    const previewUrl = `${frigate.url}/api/events/${event.id}/preview.gif`;
+                    const response = await axios.get(previewUrl, axiosConfig);
+                    previewBuffer = Buffer.from(response.data);
+                    logger.info(`Preview GIF fetched for event ${event.id} on attempt ${attempt}`);
+                    break; // Success, exit the retry loop
+                } catch (previewError) {
+                    if (attempt < maxRetries) {
+                        logger.warn(`Failed to fetch preview for event ${event.id} (attempt ${attempt}/${maxRetries}), retrying in ${retryDelay}ms...`);
+                        await new Promise(resolve => setTimeout(resolve, retryDelay));
+                    } else {
+                        logger.error(`Failed to fetch preview for event ${event.id} after ${maxRetries} attempts.`, previewError);
+                    }
+                }
+            }
+
+            // Send based on what we successfully fetched
+            if (thumbnailBuffer && previewBuffer) {
+                await telegram.sendPhotoAndAnimation(eventMessage, thumbnailBuffer, previewBuffer, event.id);
+                logger.info(`Event ${event.id} sent to Telegram with thumbnail and preview GIF`);
+            } else if (previewBuffer) {
+                telegram.sendAnimation(eventMessage, previewBuffer, event.id);
+                logger.info(`Event ${event.id} sent to Telegram with preview GIF only`);
+            } else if (thumbnailBuffer) {
                 telegram.sendPhoto(eventMessage, thumbnailBuffer, event.id);
-                logger.info(`Event ${event.id} sent to Telegram`);
+                logger.info(`Event ${event.id} sent to Telegram with thumbnail only`);
             } else {
-                logger.warn(`Could not retrieve thumbnail for event ${event.id} after ${maxRetries} attempts. Sending text-only notification.`);
+                logger.warn(`Could not retrieve any media for event ${event.id}. Sending text-only notification.`);
                 telegram.sendMessage(eventMessage, event.id);
-                logger.info(`Event ${event.id} sent to Telegram without thumbnail`);
+                logger.info(`Event ${event.id} sent to Telegram without media`);
             }
         } else {
             logger.info(`Notifications are disabled. Skipping event ${event.id}.`);

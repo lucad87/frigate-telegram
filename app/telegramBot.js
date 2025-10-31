@@ -52,6 +52,18 @@ const sendPhoto = (eventMessage, photoBuffer, eventId) => {
     }
 };
 
+const sendMessage = (eventMessage, eventId) => {
+    const options = {
+        parse_mode: 'HTML'
+    };
+
+    try {
+        bot.sendMessage(chatId, eventMessage, options);
+    } catch (error) {
+        logger.error('Error sending message to Telegram:', error);
+    }
+};
+
 const getNotificationsEnabled = () => notificationsEnabled;
 
-module.exports = { sendPhoto, getNotificationsEnabled };
+module.exports = { sendPhoto, sendMessage, getNotificationsEnabled };

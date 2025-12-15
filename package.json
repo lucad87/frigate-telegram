@@ -6,7 +6,7 @@
   "dependencies": {
     "axios": "^1.7.3",
     "dotenv": "^17.2.3",
-    "node-telegram-bot-api": "^0.66.0",
+    "node-telegram-bot-api": "^0.67.0",
     "winston": "^3.14.1"
   },
   "author": {

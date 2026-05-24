@@ -31,7 +31,7 @@ https://hub.docker.com/r/lucad87/frigate-telegram
   - Static thumbnail image
   - Animated preview GIF
 - **Authentication Support**: Secure access to Frigate API using username and password.
-- **Notification Toggle**: Enable or disable notifications directly via Telegram commands (`/enable_notifications` and `/disable_notifications`).
+- **Bot Commands**: Interact with the bot via Telegram commands. Use `/start` or `/help` to see available commands, `/enable_notifications` to enable notifications, and `/disable_notifications` to disable them.
 - **Customizable**: Configure the bot to monitor specific cameras, zones, and object labels.
 - **Retry Logic**: Automatically retries fetching media if not immediately available.
 - **Debugging**: Enable debug logging for troubleshooting and development purposes.
@@ -99,10 +99,11 @@ services:
     docker compose up -d
     ```
 
-3.  **Control Notifications via Telegram**:
-    Once the bot is running, you can enable or disable notifications by sending commands directly to your bot in Telegram:
-    - `/enable_notifications`: To enable event notifications.
-    - `/disable_notifications`: To disable event notifications.
+ 3.  **Control the Bot via Telegram**:
+     Once the bot is running, you can interact with it by sending commands directly to your bot in Telegram:
+     - `/start` or `/help`: Show available commands.
+     - `/enable_notifications`: Enable event notifications.
+     - `/disable_notifications`: Disable event notifications.
 
 ## Development
 

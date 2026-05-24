@@ -17,6 +17,23 @@ let notificationsEnabled = true; // New state variable
 */
 process.env['NTBA_FIX_350'] = 1; // Fix for the warning above
 
+bot.setMyCommands([
+    { command: 'start', description: 'Mostra i comandi disponibili' },
+    { command: 'help', description: 'Mostra i comandi disponibili' },
+    { command: 'enable_notifications', description: 'Attiva le notifiche' },
+    { command: 'disable_notifications', description: 'Disattiva le notifiche' }
+]);
+
+bot.onText(/^\/(start|help)$/, (msg) => {
+    const commands = [
+        '/start - Mostra i comandi disponibili',
+        '/help - Mostra i comandi disponibili',
+        '/enable_notifications - Attiva le notifiche',
+        '/disable_notifications - Disattiva le notifiche'
+    ];
+    bot.sendMessage(msg.chat.id, 'Comandi disponibili:\n' + commands.join('\n'));
+});
+
 bot.on('polling_error', (error) => {
     logger.error('Polling error:', error);
     process.exit(1); // Exit the application with a non-zero status code

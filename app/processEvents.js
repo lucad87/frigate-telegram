@@ -12,7 +12,7 @@ const processEvent = async (event) => {
         if (telegram.getNotificationsEnabled()) { // Check if notifications are enabled
             logger.info(`Event ${event.id} received`);
 
-            const eventMessage = formatEventMessage(event, frigate.mediaUrl);
+            const eventMessage = formatEventMessage(event, frigate.uiUrl);
             
             // Fetch both the thumbnail and preview GIF from Frigate
             // Retry a few times in case they are not immediately available

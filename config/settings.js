@@ -6,6 +6,9 @@ const config = {
     frigate: {
         url: process.env.FRIGATE_URL,
         mediaUrl: process.env.FRIGATE_MEDIA_URL || process.env.FRIGATE_URL,
+        // base URL used for the links in the messages: the Frigate UI, reachable
+        // from the recipients' browsers
+        uiUrl: process.env.FRIGATE_UI_URL || process.env.FRIGATE_MEDIA_URL || process.env.FRIGATE_URL,
         camera: process.env.CAMERA,
         zones: process.env.ZONES,
         label: process.env.LABEL,

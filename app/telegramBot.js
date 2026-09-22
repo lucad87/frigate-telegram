@@ -83,6 +83,7 @@ bot.on('message', async (msg) => {
     }
 
     try {
+        logger.info(`Command /${parsed.command} args=[${parsed.args.join(' ')}]`);
         await commands[parsed.command](msg, parsed.args);
     } catch (error) {
         logger.error(`Error handling /${parsed.command}:`, error);

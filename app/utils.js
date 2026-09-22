@@ -1,7 +1,13 @@
 const util = require('util');
+const { dateTime } = require('../config/settings.js').config;
 
+// The container has no LANG set, so a bare toLocaleString() falls back to the
+// en-US format and the configured LOCALES/TIMEZONE are ignored. Pass them
+// explicitly, as logger.js already does for the log timestamps.
 const epochToDateTime = (epoch) => {
-    return new Date(epoch * 1000).toLocaleString();
+    return new Date(epoch * 1000).toLocaleString(dateTime.locales, {
+        timeZone: dateTime.timezone
+    });
 };
 
 const getEpochTimestampFromSecondsAgo = (seconds) => {

@@ -15,7 +15,7 @@ const MAX_EVENTS_LIMIT = 10;
 const COMMANDS = [
     { command: 'help', description: 'Mostra i comandi disponibili' },
     { command: 'status', description: 'Stato di Frigate e delle telecamere' },
-    { command: 'events', description: `Ultimi eventi, /events [n] (default ${DEFAULT_EVENTS_LIMIT})` },
+    { command: 'events', description: `Ultimi eventi (default ${DEFAULT_EVENTS_LIMIT}, max ${MAX_EVENTS_LIMIT})` },
     { command: 'enable_notifications', description: 'Attiva le notifiche' },
     { command: 'disable_notifications', description: 'Disattiva le notifiche' }
 ];

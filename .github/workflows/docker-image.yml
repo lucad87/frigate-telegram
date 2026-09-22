@@ -9,6 +9,9 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    # the release tag is pushed back to the repo at the end of the job
+    permissions:
+      contents: write
     steps:
     - name: Check out the repo
       uses: actions/checkout@v4

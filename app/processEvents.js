@@ -23,7 +23,7 @@ const processEvent = async (event) => {
 
             // Media requests are authenticated with the same JWT used by the API
             const fetchMedia = (url) => withFrigateAuth(
-                (headers) => axios.get(url, { headers, responseType: 'arraybuffer' })
+                (requestConfig) => axios.get(url, { ...requestConfig, responseType: 'arraybuffer' })
             );
 
             // Fetch thumbnail

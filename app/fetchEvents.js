@@ -16,7 +16,7 @@ const fetchEvents = async () => {
         };
 
         // Frigate authenticates with a JWT (Bearer token), not with HTTP Basic auth
-        const response = await withFrigateAuth((headers) => axios.get(url, { headers, params }));
+        const response = await withFrigateAuth((requestConfig) => axios.get(url, { ...requestConfig, params }));
 
         return response.data;
     } catch (error) {

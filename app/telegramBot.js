@@ -1,4 +1,4 @@
-const TelegramBot = require('node-telegram-bot-api');
+const { TelegramBot } = require('node-telegram-bot-api');
 const logger = require('./logger.js');
 const { telegram } = require('../config/settings.js').config;
 
@@ -8,14 +8,6 @@ const chatId = telegram.chatId;
 const bot = new TelegramBot(token, { polling: true });
 
 let notificationsEnabled = true; // New state variable
-
-/*
-    * (node:1) [node-telegram-bot-api] DeprecationWarning: 
-    * In the future, content-type of files you send will default to "application/octet-stream". 
-    * See https://github.com/yagop/node-telegram-bot-api/blob/master/doc/usage.md#sending-files 
-    * for more information on how sending files has been improved and on how to disable this deprecation message altogether.
-*/
-process.env['NTBA_FIX_350'] = 1; // Fix for the warning above
 
 bot.setMyCommands([
     { command: 'start', description: 'Mostra i comandi disponibili' },

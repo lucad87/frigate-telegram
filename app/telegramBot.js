@@ -17,6 +17,15 @@ const chatId = telegram.chatId;
 const bot = new TelegramBot(token, { polling: true });
 
 let notificationsEnabled = true; // New state variable
+let botUsername = null; // filled in below, used to strip the @mention exactly
+
+bot.getMe()
+    .then((me) => {
+        botUsername = me.username;
+    })
+    .catch((error) => {
+        logger.error('Error reading the bot username:', error);
+    });
 
 bot.setMyCommands(COMMANDS).catch((error) => {
     // An unhandled rejection would terminate the process
@@ -42,7 +51,9 @@ const commands = {
         const limit = parseEventsLimit(args);
         const events = await getRecentEvents(limit);
 
-        reply(msg.chat.id, formatEventList(events, frigate.uiUrl, limit));
+        reply(msg.chat.id, formatEventList(events, frigate.uiUrl, limit, {
+            showLimitHint: args.length === 0
+        }));
     },
 
     enable_notifications: (msg) => {
@@ -59,9 +70,15 @@ const commands = {
 };
 
 bot.on('message', async (msg) => {
-    const parsed = parseCommand(msg.text);
+    const parsed = parseCommand(msg.text, botUsername);
 
     if (!parsed) {
+        // command-like texts are worth leaving a trace of, they are the only
+        // ones the parser can silently ignore
+        if (typeof msg.text === 'string' && msg.text.trim().startsWith('/')) {
+            logger.info(`Unrecognised command text: ${JSON.stringify(msg.text.slice(0, 80))}`);
+        }
+
         return;
     }
 

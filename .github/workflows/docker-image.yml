@@ -15,27 +15,53 @@ jobs:
       with:
         fetch-depth: 0
 
+    - name: Extract version from package.json
+      id: get_version
+      run: echo "version=$(jq -r .version package.json)" >> "$GITHUB_OUTPUT"
+
+    # PRs are published as :next for testing, master as :latest plus the released version
+    - name: Compute image tags
+      id: tags
+      run: |
+        if [ "${{ github.event_name }}" = "pull_request" ]; then
+          echo "tags=lucad87/frigate-telegram:next" >> "$GITHUB_OUTPUT"
+        else
+          {
+            echo "tags<<TAGS_EOF"
+            echo "lucad87/frigate-telegram:latest"
+            echo "lucad87/frigate-telegram:v${{ steps.get_version.outputs.version }}"
+            echo "TAGS_EOF"
+          } >> "$GITHUB_OUTPUT"
+        fi
+
     - name: Login to Dockerhub
+      if: github.actor != 'dependabot[bot]' && github.event.pull_request.head.repo.fork != true
       uses: docker/login-action@v3
       with:
         username: ${{ secrets.DOCKERHUB_USERNAME }}
         password: ${{ secrets.DOCKERHUB_TOKEN }}
 
     - name: Build and push to Dockerhub
+      if: github.actor != 'dependabot[bot]' && github.event.pull_request.head.repo.fork != true
       id: docker_build
       uses: docker/build-push-action@v5
       with:
         push: true
-        tags: ${{ github.event_name == 'pull_request' && 'lucad87/frigate-telegram:next' || 'lucad87/frigate-telegram:latest' }}
+        tags: ${{ steps.tags.outputs.tags }}
+
+    # dependabot PRs and forks do not receive the Docker Hub secrets, so they only build
+    - name: Build without pushing
+      if: github.actor == 'dependabot[bot]' || github.event.pull_request.head.repo.fork == true
+      uses: docker/build-push-action@v5
+      with:
+        push: false
 
     - name: Image digest
+      if: steps.docker_build.outputs.digest != ''
       run: echo ${{ steps.docker_build.outputs.digest }}
 
-    - name: Extract version from package.json
-      id: get_version
-      run: echo "version=$(jq -r .version package.json)" >> "$GITHUB_OUTPUT"
-
     - name: Set up Git user
+      if: github.ref == 'refs/heads/master'
       run: |
         git config user.email "github-actions[bot]@users.noreply.github.com"
         git config user.name "github-actions[bot]"

@@ -8,7 +8,7 @@ const fetchFrigateStatus = async () => {
         const url = `${frigate.url}/api/version`;
 
         // Frigate authenticates with a JWT (Bearer token), not with HTTP Basic auth
-        const response = await withFrigateAuth((headers) => axios.get(url, { headers }));
+        const response = await withFrigateAuth((requestConfig) => axios.get(url, requestConfig));
 
         return response.status;
     } catch (error) {

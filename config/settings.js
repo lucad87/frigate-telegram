@@ -11,7 +11,9 @@ const config = {
         label: process.env.LABEL,
         username: process.env.FRIGATE_USERNAME,
         password: process.env.FRIGATE_PASSWORD,
-        cookieName: process.env.FRIGATE_COOKIE_NAME || 'frigate_token'
+        cookieName: process.env.FRIGATE_COOKIE_NAME || 'frigate_token',
+        tlsInsecure: process.env.FRIGATE_TLS_INSECURE === 'true',
+        caCert: process.env.FRIGATE_CA_CERT
     },
     dateTime: {
         timezone: process.env.TIMEZONE || 'Europe/Rome',

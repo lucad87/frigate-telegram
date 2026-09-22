@@ -49,6 +49,8 @@ These variables are essential for the bot's operation and should be configured i
 - `FRIGATE_USERNAME`: (Optional) Username for Frigate authentication. Required if your Frigate instance has authentication enabled.
 - `FRIGATE_PASSWORD`: (Optional) Password for Frigate authentication. Required if your Frigate instance has authentication enabled.
 - `FRIGATE_COOKIE_NAME`: (Optional) Name of the Frigate session cookie holding the JWT, `frigate_token` by default. Only needed if you changed `auth.cookie_name` in your Frigate configuration.
+- `FRIGATE_CA_CERT`: (Optional) Path to a PEM file holding the certificate (or CA) to trust for Frigate's HTTPS endpoint, e.g. `/app/certs/frigate.pem`. Needed when `FRIGATE_URL` points at the authenticated port `8971`, which uses a self-signed certificate by default. The certificate chain is validated against the pinned file; the hostname check is skipped because Frigate's default certificate is issued for `CN = *`.
+- `FRIGATE_TLS_INSECURE`: (Optional) Set to `true` to disable TLS certificate verification for Frigate. Use it as a last resort only, prefer `FRIGATE_CA_CERT`.
 - `TELEGRAM_BOT_TOKEN`: The token for your Telegram bot.
 - `TELEGRAM_CHAT_ID`: The chat ID where notifications will be sent.
 - `CAMERA`: The name of the frigate camera to monitor.
@@ -71,7 +73,8 @@ Notes:
 - Credentials are only used if **both** `FRIGATE_USERNAME` and `FRIGATE_PASSWORD` are set.
 - The token is valid for Frigate's `auth.session_length` (24 hours by default) and is renewed automatically; if Frigate rejects it (for example after `FRIGATE_JWT_SECRET` changes), the bot authenticates again on the next request.
 - A `401` in the logs means Frigate is answering unauthenticated: either set the credentials for port `8971`, or move to port `5000`.
-- If you want the video links in Telegram to open for the recipients, `FRIGATE_MEDIA_URL` must point at an endpoint that does not require authentication, as those links cannot carry credentials.
+- Port `8971` serves a **self-signed certificate** ("FRIGATE DEFAULT CERT") unless you configured TLS. Node refuses it by default, so pointing `FRIGATE_URL` at `https://<frigate-host>:8971` needs `FRIGATE_CA_CERT` (preferred) or `FRIGATE_TLS_INSECURE=true`. Reverse proxies with a valid certificate (e.g. `https://frigate.example.com`) do not need either. To get the PEM: `openssl s_client -connect <frigate-host>:8971 -servername <frigate-host> </dev/null 2>/dev/null | openssl x509 -outform PEM > frigate.pem`.
+- The video links in Telegram cannot carry credentials, so `FRIGATE_MEDIA_URL` must point at an endpoint that anyone in the chat can open. If it requires authentication, recipients who are not logged into Frigate get a `401` when they click the link: publish only the media path (for example `/api/events/*/clip.mp4`) through your reverse proxy without authentication, or accept that the links only work for users already signed in.
 
 ### Volumes
 - `./logs:/app/logs`: Mounts the logs directory to persist log files.
@@ -89,6 +92,8 @@ services:
       - FRIGATE_USERNAME=<your-frigate-username> # (optional) Required if Frigate has authentication enabled (port 8971)
       - FRIGATE_PASSWORD=<your-frigate-password> # (optional) Required if Frigate has authentication enabled (port 8971)
       - FRIGATE_COOKIE_NAME=<your-frigate-cookie-name> # (optional) Only if you changed auth.cookie_name in Frigate, frigate_token is the default
+      - FRIGATE_CA_CERT=<path-to-pem> # (optional) Trust this certificate for Frigate's HTTPS endpoint, needed for port 8971 with its self-signed certificate
+      - FRIGATE_TLS_INSECURE=true # (optional) Disable TLS verification instead of providing a certificate, last resort only
       - TELEGRAM_BOT_TOKEN=<your-telegram-token>
       - TELEGRAM_CHAT_ID=<your-telegram-chat-id>
       - CAMERA=<frigate-camera>

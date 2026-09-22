@@ -1,5 +1,6 @@
 const axios = require('axios').default;
 const logger = require('./logger.js');
+const { getTlsConfig } = require('./frigateTls.js');
 const { frigate } = require('../config/settings.js').config;
 
 /*
@@ -52,7 +53,7 @@ const login = async () => {
         const response = await axios.post(`${frigate.url}/api/login`, {
             user: frigate.username,
             password: frigate.password
-        });
+        }, getTlsConfig());
 
         const token = extractToken(response);
 
@@ -107,23 +108,26 @@ const invalidateToken = () => {
     cachedTokenExpiresAt = 0;
 };
 
+const getRequestConfig = async () => ({
+    ...getTlsConfig(),
+    headers: await getAuthHeaders()
+});
+
 /*
     Runs a request with the current token and retries once with a fresh one when
     Frigate rejects it (for example after the token secret changed or the session
     expired while polling).
 */
 const withFrigateAuth = async (request) => {
-    const headers = await getAuthHeaders();
-
     try {
-        return await request(headers);
+        return await request(await getRequestConfig());
     } catch (error) {
         const status = error.response && error.response.status;
 
         if (status === 401 && hasCredentials() && !authDisabled) {
             logger.warn('Frigate rejected the token, authenticating again');
             invalidateToken();
-            return await request(await getAuthHeaders());
+            return await request(await getRequestConfig());
         }
 
         if (status === 401) {

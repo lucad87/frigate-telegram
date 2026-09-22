@@ -3,9 +3,10 @@
     (setMyCommands), the /help reply and the message dispatcher are all built
     from COMMANDS.
 
-    Commands are matched loosely on purpose: in a group Telegram sends
-    `/command@the_bot` when the command is picked from the menu, and clients may
-    add spacing, so an anchored `^/command$` test silently ignores them.
+    Parsing is deliberately forgiving. Telegram adds an @mention when a command
+    is picked from the menu in a group (`/events@the_bot 10`), clients differ in
+    where they put the space, and the mention can end up glued to the argument
+    (`/events@the_bot10`), which an anchored `^/command$` test ignores entirely.
 */
 const { epochToDateTime, buildReviewUrl } = require('./utils.js');
 
@@ -24,29 +25,48 @@ const COMMANDS = [
 // still gets an answer
 const ALIASES = { start: 'help' };
 
-const COMMAND_PATTERN = /^\/([a-z_]+)(?:@[a-z0-9_]+)?(?:\s+([\s\S]*))?$/i;
+// longest first, so `enable_notifications` is matched before a shorter prefix
+const COMMAND_NAMES = [...COMMANDS.map((entry) => entry.command), ...Object.keys(ALIASES)]
+    .sort((first, second) => second.length - first.length);
 
-const parseCommand = (text) => {
+const parseCommand = (text, botUsername) => {
     if (typeof text !== 'string') {
         return undefined;
     }
 
-    const match = text.trim().match(COMMAND_PATTERN);
+    const value = text.trim();
 
-    if (!match) {
+    if (!value.startsWith('/')) {
         return undefined;
     }
 
-    const name = match[1].toLowerCase();
-    const command = ALIASES[name] || name;
+    const lowered = value.toLowerCase();
+    const name = COMMAND_NAMES.find((entry) => lowered.startsWith(`/${entry}`));
 
-    if (!COMMANDS.some((entry) => entry.command === command)) {
+    if (!name) {
         return undefined;
     }
+
+    let rest = value.slice(1 + name.length);
+
+    // drop the @mention, exactly when the bot username is known (so a glued
+    // argument survives), otherwise in its generic form
+    if (botUsername && rest.toLowerCase().startsWith(`@${botUsername.toLowerCase()}`)) {
+        rest = rest.slice(1 + botUsername.length);
+    } else {
+        rest = rest.replace(/^@[a-z0-9_]+/i, '');
+    }
+
+    // `/help_bot` must not be read as `/help`
+    if (/^[a-z_]/i.test(rest)) {
+        return undefined;
+    }
+
+    const argumentsText = rest.trim();
 
     return {
-        command,
-        args: (match[2] || '').trim().split(/\s+/).filter(Boolean)
+        command: ALIASES[name] || name,
+        args: argumentsText ? argumentsText.split(/\s+/).filter(Boolean) : []
     };
 };
 
@@ -55,15 +75,16 @@ const helpMessage = () => [
     ...COMMANDS.map((entry) => `/${entry.command} - ${entry.description}`)
 ].join('\n');
 
-// /events [n]
+// /events [n] - the first number in the arguments wins, so `/events 10`,
+// `/events=10` and `/events 10.` all mean ten
 const parseEventsLimit = (args) => {
-    const requested = (args && args[0]) || '';
+    const match = (args || []).join(' ').match(/\d+/);
 
-    if (!/^\d+$/.test(requested)) {
+    if (!match) {
         return DEFAULT_EVENTS_LIMIT;
     }
 
-    return Math.min(Math.max(Number.parseInt(requested, 10), 1), MAX_EVENTS_LIMIT);
+    return Math.min(Math.max(Number.parseInt(match[0], 10), 1), MAX_EVENTS_LIMIT);
 };
 
 // the API reports storage in megabytes
@@ -126,7 +147,7 @@ const formatStatus = (stats, version, notificationsEnabled) => {
     return lines.join('\n');
 };
 
-const formatEventList = (events, frigateUiUrl, limit) => {
+const formatEventList = (events, frigateUiUrl, limit, options = {}) => {
     const list = (Array.isArray(events) ? [...events] : [])
         .sort((first, second) => second.start_time - first.start_time)
         .slice(0, limit);
@@ -143,6 +164,10 @@ const formatEventList = (events, frigateUiUrl, limit) => {
         lines.push(`${index + 1}. ${label} · ${event.camera} · ${epochToDateTime(event.start_time)}`);
         lines.push(buildReviewUrl(event, frigateUiUrl));
     });
+
+    if (options.showLimitHint) {
+        lines.push('', `Per cambiare il numero: /events N (max ${MAX_EVENTS_LIMIT})`);
+    }
 
     return lines.join('\n');
 };

@@ -1,7 +1,15 @@
 const { TelegramBot } = require('node-telegram-bot-api');
 const logger = require('./logger.js');
-const { COMMANDS, parseCommand, helpMessage } = require('./commands.js');
-const { telegram } = require('../config/settings.js').config;
+const {
+    COMMANDS,
+    parseCommand,
+    helpMessage,
+    parseEventsLimit,
+    formatStatus,
+    formatEventList
+} = require('./commands.js');
+const { getVersion, getStats, getRecentEvents } = require('./frigateApi.js');
+const { telegram, frigate } = require('../config/settings.js').config;
 
 const token = telegram.token;
 const chatId = telegram.chatId;
@@ -21,27 +29,47 @@ const reply = (targetChatId, message) => {
     });
 };
 
-bot.on('message', (msg) => {
-    const command = parseCommand(msg.text);
+const commands = {
+    help: (msg) => reply(msg.chat.id, helpMessage()),
 
-    if (!command) {
+    status: async (msg) => {
+        const [stats, version] = await Promise.all([getStats(), getVersion()]);
+
+        reply(msg.chat.id, formatStatus(stats, version, notificationsEnabled));
+    },
+
+    events: async (msg, args) => {
+        const limit = parseEventsLimit(args);
+        const events = await getRecentEvents(limit);
+
+        reply(msg.chat.id, formatEventList(events, frigate.uiUrl, limit));
+    },
+
+    enable_notifications: (msg) => {
+        notificationsEnabled = true;
+        logger.info('Notifications enabled via Telegram command.');
+        reply(msg.chat.id, 'Notifiche attivate.');
+    },
+
+    disable_notifications: (msg) => {
+        notificationsEnabled = false;
+        logger.info('Notifications disabled via Telegram command.');
+        reply(msg.chat.id, 'Notifiche disattivate.');
+    }
+};
+
+bot.on('message', async (msg) => {
+    const parsed = parseCommand(msg.text);
+
+    if (!parsed) {
         return;
     }
 
-    switch (command) {
-        case 'help':
-            reply(msg.chat.id, helpMessage());
-            break;
-        case 'enable_notifications':
-            notificationsEnabled = true;
-            logger.info('Notifications enabled via Telegram command.');
-            reply(msg.chat.id, 'Notifiche attivate.');
-            break;
-        case 'disable_notifications':
-            notificationsEnabled = false;
-            logger.info('Notifications disabled via Telegram command.');
-            reply(msg.chat.id, 'Notifiche disattivate.');
-            break;
+    try {
+        await commands[parsed.command](msg, parsed.args);
+    } catch (error) {
+        logger.error(`Error handling /${parsed.command}:`, error);
+        reply(msg.chat.id, `Errore: non riesco a leggere i dati da Frigate (${error.message})`);
     }
 });
 

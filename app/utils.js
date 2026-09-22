@@ -9,12 +9,18 @@ const getEpochTimestampFromSecondsAgo = (seconds) => {
     return Math.floor((actual_dateTime - (seconds * 1000)) / 1000);
 };
 
+// Frigate's own recording share link: /review?timestamp=<camera>_<seconds>.
+// Opening that in the UI shows the event with the viewer authenticated, which
+// the raw clip endpoint (/api/events/<id>/clip.mp4) cannot do, since a link
+// cannot carry credentials.
+const buildReviewUrl = (event, frigateUiUrl) => {
+    const timestamp = encodeURIComponent(`${event.camera}_${Math.floor(event.start_time)}`);
+
+    return `${frigateUiUrl}/review?timestamp=${timestamp}`;
+};
+
 const formatEventMessage = (event, frigateUiUrl) => {
-    // The link opens the event in the Frigate UI instead of pointing at the clip
-    // file: /api/events/<id>/clip.mp4 requires authentication and a link cannot
-    // carry credentials, so it answers 401 to whoever clicks it.
-    // Frigate's own recording share link is /review?timestamp=<camera>_<seconds>.
-    const reviewUrl = `${frigateUiUrl}/review?timestamp=${encodeURIComponent(`${event.camera}_${Math.floor(event.start_time)}`)}`;
+    const reviewUrl = buildReviewUrl(event, frigateUiUrl);
 
     return util.format('%s\n%s\n%s\n%s\n%s',
         '⚠️⚠️ <b>EVENT DETECTED</b> ⚠️⚠️', 
@@ -25,4 +31,4 @@ const formatEventMessage = (event, frigateUiUrl) => {
     );
 };
 
-module.exports = { epochToDateTime, getEpochTimestampFromSecondsAgo, formatEventMessage };
+module.exports = { epochToDateTime, getEpochTimestampFromSecondsAgo, buildReviewUrl, formatEventMessage };

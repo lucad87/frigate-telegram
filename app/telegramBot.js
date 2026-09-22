@@ -1,6 +1,15 @@
 const { TelegramBot } = require('node-telegram-bot-api');
 const logger = require('./logger.js');
-const { telegram } = require('../config/settings.js').config;
+const {
+    COMMANDS,
+    parseCommand,
+    helpMessage,
+    parseEventsLimit,
+    formatStatus,
+    formatEventList
+} = require('./commands.js');
+const { getVersion, getStats, getRecentEvents } = require('./frigateApi.js');
+const { telegram, frigate } = require('../config/settings.js').config;
 
 const token = telegram.token;
 const chatId = telegram.chatId;
@@ -9,41 +18,64 @@ const bot = new TelegramBot(token, { polling: true });
 
 let notificationsEnabled = true; // New state variable
 
-bot.setMyCommands([
-    { command: 'start', description: 'Mostra i comandi disponibili' },
-    { command: 'help', description: 'Mostra i comandi disponibili' },
-    { command: 'enable_notifications', description: 'Attiva le notifiche' },
-    { command: 'disable_notifications', description: 'Disattiva le notifiche' }
-]).catch((error) => {
+bot.setMyCommands(COMMANDS).catch((error) => {
     // An unhandled rejection would terminate the process
     logger.error('Error setting the bot commands:', error);
 });
 
-bot.onText(/^\/(start|help)$/, (msg) => {
-    const commands = [
-        '/start - Mostra i comandi disponibili',
-        '/help - Mostra i comandi disponibili',
-        '/enable_notifications - Attiva le notifiche',
-        '/disable_notifications - Disattiva le notifiche'
-    ];
-    bot.sendMessage(msg.chat.id, 'Comandi disponibili:\n' + commands.join('\n'));
+const reply = (targetChatId, message) => {
+    bot.sendMessage(targetChatId, message).catch((error) => {
+        logger.error('Error sending message to Telegram:', error);
+    });
+};
+
+const commands = {
+    help: (msg) => reply(msg.chat.id, helpMessage()),
+
+    status: async (msg) => {
+        const [stats, version] = await Promise.all([getStats(), getVersion()]);
+
+        reply(msg.chat.id, formatStatus(stats, version, notificationsEnabled));
+    },
+
+    events: async (msg, args) => {
+        const limit = parseEventsLimit(args);
+        const events = await getRecentEvents(limit);
+
+        reply(msg.chat.id, formatEventList(events, frigate.uiUrl, limit));
+    },
+
+    enable_notifications: (msg) => {
+        notificationsEnabled = true;
+        logger.info('Notifications enabled via Telegram command.');
+        reply(msg.chat.id, 'Notifiche attivate.');
+    },
+
+    disable_notifications: (msg) => {
+        notificationsEnabled = false;
+        logger.info('Notifications disabled via Telegram command.');
+        reply(msg.chat.id, 'Notifiche disattivate.');
+    }
+};
+
+bot.on('message', async (msg) => {
+    const parsed = parseCommand(msg.text);
+
+    if (!parsed) {
+        return;
+    }
+
+    try {
+        await commands[parsed.command](msg, parsed.args);
+    } catch (error) {
+        logger.error(`Error handling /${parsed.command}:`, error);
+        reply(msg.chat.id, `Errore: non riesco a leggere i dati da Frigate (${error.message})`);
+    }
 });
 
 bot.on('polling_error', (error) => {
     logger.error('Polling error:', error);
     process.exit(1); // Exit the application with a non-zero status code
-});
-
-bot.onText(/\/enable_notifications/, (msg) => {
-    notificationsEnabled = true;
-    bot.sendMessage(msg.chat.id, 'Notifications enabled.');
-    logger.info('Notifications enabled via Telegram command.');
-});
-
-bot.onText(/\/disable_notifications/, (msg) => {
-    notificationsEnabled = false;
-    bot.sendMessage(msg.chat.id, 'Notifications disabled.');
-    logger.info('Notifications disabled via Telegram command.');
 });
 
 const sendPhoto = (eventMessage, photoBuffer, eventId) => {

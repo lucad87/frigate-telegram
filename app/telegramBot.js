@@ -1,4 +1,4 @@
-const TelegramBot = require('node-telegram-bot-api');
+const { TelegramBot } = require('node-telegram-bot-api');
 const logger = require('./logger.js');
 const { telegram } = require('../config/settings.js').config;
 
@@ -9,20 +9,15 @@ const bot = new TelegramBot(token, { polling: true });
 
 let notificationsEnabled = true; // New state variable
 
-/*
-    * (node:1) [node-telegram-bot-api] DeprecationWarning: 
-    * In the future, content-type of files you send will default to "application/octet-stream". 
-    * See https://github.com/yagop/node-telegram-bot-api/blob/master/doc/usage.md#sending-files 
-    * for more information on how sending files has been improved and on how to disable this deprecation message altogether.
-*/
-process.env['NTBA_FIX_350'] = 1; // Fix for the warning above
-
 bot.setMyCommands([
     { command: 'start', description: 'Mostra i comandi disponibili' },
     { command: 'help', description: 'Mostra i comandi disponibili' },
     { command: 'enable_notifications', description: 'Attiva le notifiche' },
     { command: 'disable_notifications', description: 'Disattiva le notifiche' }
-]);
+]).catch((error) => {
+    // An unhandled rejection would terminate the process
+    logger.error('Error setting the bot commands:', error);
+});
 
 bot.onText(/^\/(start|help)$/, (msg) => {
     const commands = [
@@ -62,11 +57,11 @@ const sendPhoto = (eventMessage, photoBuffer, eventId) => {
         contentType: 'image/jpeg'
     };
 
-    try {
-        bot.sendPhoto(chatId, photoBuffer, options, fileOptions);
-    } catch (error) {
+    // These calls return a promise: without a catch the rejection would be
+    // unhandled and terminate the process
+    bot.sendPhoto(chatId, photoBuffer, options, fileOptions).catch((error) => {
         logger.error('Error sending message and thumbnail to Telegram:', error);
-    }
+    });
 };
 
 const sendAnimation = (eventMessage, animationBuffer, eventId) => {
@@ -80,11 +75,9 @@ const sendAnimation = (eventMessage, animationBuffer, eventId) => {
         contentType: 'image/gif'
     };
 
-    try {
-        bot.sendAnimation(chatId, animationBuffer, options, fileOptions);
-    } catch (error) {
+    bot.sendAnimation(chatId, animationBuffer, options, fileOptions).catch((error) => {
         logger.error('Error sending message and animation to Telegram:', error);
-    }
+    });
 };
 
 const sendPhotoAndAnimation = async (eventMessage, thumbnailBuffer, animationBuffer, eventId) => {
@@ -119,11 +112,9 @@ const sendMessage = (eventMessage, eventId) => {
         parse_mode: 'HTML'
     };
 
-    try {
-        bot.sendMessage(chatId, eventMessage, options);
-    } catch (error) {
+    bot.sendMessage(chatId, eventMessage, options).catch((error) => {
         logger.error('Error sending message to Telegram:', error);
-    }
+    });
 };
 
 const getNotificationsEnabled = () => notificationsEnabled;

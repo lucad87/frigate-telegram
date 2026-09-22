@@ -7,6 +7,7 @@ This project is a Telegram bot integration for Frigate, an open-source NVR (Netw
 - [Features](#features)
 - [Getting Started](#getting-started)
   - [Environment Variables](#environment-variables)
+  - [Frigate Authentication](#frigate-authentication)
   - [Volumes](#volumes)
   - [Docker Compose Configuration](#docker-compose-configuration)
 - [Usage](#usage)
@@ -30,7 +31,7 @@ https://hub.docker.com/r/lucad87/frigate-telegram
   - Clickable video link with 30 seconds padding before/after the event
   - Static thumbnail image
   - Animated preview GIF
-- **Authentication Support**: Secure access to Frigate API using username and password.
+- **Authentication Support**: Secure access to Frigate API using username and password, exchanged for a JWT token as Frigate requires.
 - **Bot Commands**: Interact with the bot via Telegram commands. Use `/start` or `/help` to see available commands, `/enable_notifications` to enable notifications, and `/disable_notifications` to disable them.
 - **Customizable**: Configure the bot to monitor specific cameras, zones, and object labels.
 - **Retry Logic**: Automatically retries fetching media if not immediately available.
@@ -43,10 +44,11 @@ To get the Frigate-Telegram bot up and running, follow these steps:
 
 ### Environment Variables
 These variables are essential for the bot's operation and should be configured in your `docker-compose.yml` file:
-- `FRIGATE_URL`: The URL of your Frigate instance (e.g., `http://192.168.1.7:5000`).
-- `FRIGATE_MEDIA_URL`: (Optional) The public URL of your Frigate media files (e.g., `https://your-media-frigate-instance.com`).
+- `FRIGATE_URL`: The URL of your Frigate instance (e.g., `http://192.168.1.7:5000`, or `http://192.168.1.7:8971` when authentication is enabled).
+- `FRIGATE_MEDIA_URL`: (Optional) The public URL of your Frigate media files (e.g., `https://your-media-frigate-instance.com`). It should be reachable **without authentication**, because the video links are sent to Telegram without credentials.
 - `FRIGATE_USERNAME`: (Optional) Username for Frigate authentication. Required if your Frigate instance has authentication enabled.
 - `FRIGATE_PASSWORD`: (Optional) Password for Frigate authentication. Required if your Frigate instance has authentication enabled.
+- `FRIGATE_COOKIE_NAME`: (Optional) Name of the Frigate session cookie holding the JWT, `frigate_token` by default. Only needed if you changed `auth.cookie_name` in your Frigate configuration.
 - `TELEGRAM_BOT_TOKEN`: The token for your Telegram bot.
 - `TELEGRAM_CHAT_ID`: The chat ID where notifications will be sent.
 - `CAMERA`: The name of the frigate camera to monitor.
@@ -56,6 +58,20 @@ These variables are essential for the bot's operation and should be configured i
 - `LOCALES`: Your locales language according the timezone, `it-IT` is the default
 - `POLLING_INTERVAL`: Interval in seconds to poll Frigate for new events (default: 60 seconds).
 - `DEBUG`: (Optional) Set to `true` to enable debug logging.
+
+### Frigate Authentication
+Frigate authenticates its API with a JWT, not with HTTP Basic auth, and it behaves differently depending on the port you point `FRIGATE_URL` at:
+
+| Frigate port | Authentication | How to configure |
+| --- | --- | --- |
+| `5000` | None (internal, unauthenticated) | `FRIGATE_URL=http://<frigate-host>:5000` and no credentials. Recommended when the bot runs in the same Docker network: this is the port Frigate reserves for integrations that do not implement its authentication. Keep it reachable only from trusted networks, since it is not protected. |
+| `8971` | Enabled (JWT) | `FRIGATE_URL=https://<frigate-host>:8971` plus `FRIGATE_USERNAME` and `FRIGATE_PASSWORD`. The bot logs in on `POST /api/login`, reuses the returned token as `Authorization: Bearer`, and logs in again before it expires. |
+
+Notes:
+- Credentials are only used if **both** `FRIGATE_USERNAME` and `FRIGATE_PASSWORD` are set.
+- The token is valid for Frigate's `auth.session_length` (24 hours by default) and is renewed automatically; if Frigate rejects it (for example after `FRIGATE_JWT_SECRET` changes), the bot authenticates again on the next request.
+- A `401` in the logs means Frigate is answering unauthenticated: either set the credentials for port `8971`, or move to port `5000`.
+- If you want the video links in Telegram to open for the recipients, `FRIGATE_MEDIA_URL` must point at an endpoint that does not require authentication, as those links cannot carry credentials.
 
 ### Volumes
 - `./logs:/app/logs`: Mounts the logs directory to persist log files.
@@ -68,10 +84,11 @@ services:
   app:
     image: lucad87/frigate-telegram:latest
     environment:
-      - FRIGATE_URL=<your-frigate-instance-url>
-      - FRIGATE_MEDIA_URL=<your-public-media-frigate-instance-url> # (optional) It fallbacks on FRIGATE_URL if not specified
-      - FRIGATE_USERNAME=<your-frigate-username> # (optional) Required if Frigate has authentication enabled
-      - FRIGATE_PASSWORD=<your-frigate-password> # (optional) Required if Frigate has authentication enabled
+      - FRIGATE_URL=<your-frigate-instance-url> # e.g. http://frigate:5000 (no auth) or https://frigate.example.com:8971 (JWT auth)
+      - FRIGATE_MEDIA_URL=<your-public-media-frigate-instance-url> # (optional) It fallbacks on FRIGATE_URL if not specified, it should not require authentication
+      - FRIGATE_USERNAME=<your-frigate-username> # (optional) Required if Frigate has authentication enabled (port 8971)
+      - FRIGATE_PASSWORD=<your-frigate-password> # (optional) Required if Frigate has authentication enabled (port 8971)
+      - FRIGATE_COOKIE_NAME=<your-frigate-cookie-name> # (optional) Only if you changed auth.cookie_name in Frigate, frigate_token is the default
       - TELEGRAM_BOT_TOKEN=<your-telegram-token>
       - TELEGRAM_CHAT_ID=<your-telegram-chat-id>
       - CAMERA=<frigate-camera>

@@ -10,7 +10,8 @@ const config = {
         zones: process.env.ZONES,
         label: process.env.LABEL,
         username: process.env.FRIGATE_USERNAME,
-        password: process.env.FRIGATE_PASSWORD
+        password: process.env.FRIGATE_PASSWORD,
+        cookieName: process.env.FRIGATE_COOKIE_NAME || 'frigate_token'
     },
     dateTime: {
         timezone: process.env.TIMEZONE || 'Europe/Rome',

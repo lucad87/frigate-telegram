@@ -1,30 +1,22 @@
 const axios = require('axios').default;
 const logger = require('./logger.js');
 const { getEpochTimestampFromSecondsAgo } = require('./utils.js');
+const { withFrigateAuth } = require('./frigateAuth.js');
 const { frigate, polling } = require('../config/settings.js').config;
 
 const fetchEvents = async () => {
     try {
         const url = `${frigate.url}/api/events`;
 
-        const axiosConfig = {
-            params: {
-                camera: frigate.camera,
-                zones: frigate.zones,
-                label: frigate.label,
-                after: getEpochTimestampFromSecondsAgo(polling.interval)
-            }
+        const params = {
+            camera: frigate.camera,
+            zones: frigate.zones,
+            label: frigate.label,
+            after: getEpochTimestampFromSecondsAgo(polling.interval)
         };
 
-        // Add authentication if credentials are provided
-        if (frigate.username && frigate.password) {
-            axiosConfig.auth = {
-                username: frigate.username,
-                password: frigate.password
-            };
-        }
-
-        const response = await axios.get(url, axiosConfig);
+        // Frigate authenticates with a JWT (Bearer token), not with HTTP Basic auth
+        const response = await withFrigateAuth((headers) => axios.get(url, { headers, params }));
 
         return response.data;
     } catch (error) {

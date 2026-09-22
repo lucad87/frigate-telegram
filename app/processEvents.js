@@ -1,6 +1,8 @@
+const axios = require('axios').default;
 const { fetchEvents } = require('./fetchEvents.js');
 const { formatEventMessage } = require('./utils.js');
 const { fetchFrigateStatus } = require('./fetchStatus.js');
+const { withFrigateAuth } = require('./frigateAuth.js');
 const { frigate } = require('../config/settings.js').config;
 const telegram = require('./telegramBot.js');
 const logger = require('./logger.js');
@@ -14,29 +16,21 @@ const processEvent = async (event) => {
             
             // Fetch both the thumbnail and preview GIF from Frigate
             // Retry a few times in case they are not immediately available
-            const axios = require('axios');
             const maxRetries = 3;
             const retryDelay = 1000; // 1 second
             let thumbnailBuffer = null;
             let previewBuffer = null;
 
-            // Setup axios config with authentication if credentials are provided
-            const axiosConfig = { 
-                responseType: 'arraybuffer'
-            };
-            
-            if (frigate.username && frigate.password) {
-                axiosConfig.auth = {
-                    username: frigate.username,
-                    password: frigate.password
-                };
-            }
+            // Media requests are authenticated with the same JWT used by the API
+            const fetchMedia = (url) => withFrigateAuth(
+                (headers) => axios.get(url, { headers, responseType: 'arraybuffer' })
+            );
 
             // Fetch thumbnail
             for (let attempt = 1; attempt <= maxRetries; attempt++) {
                 try {
                     const thumbnailUrl = `${frigate.url}/api/events/${event.id}/thumbnail.jpg`;
-                    const response = await axios.get(thumbnailUrl, axiosConfig);
+                    const response = await fetchMedia(thumbnailUrl);
                     thumbnailBuffer = Buffer.from(response.data);
                     logger.info(`Thumbnail fetched for event ${event.id} on attempt ${attempt}`);
                     break; // Success, exit the retry loop
@@ -54,7 +48,7 @@ const processEvent = async (event) => {
             for (let attempt = 1; attempt <= maxRetries; attempt++) {
                 try {
                     const previewUrl = `${frigate.url}/api/events/${event.id}/preview.gif`;
-                    const response = await axios.get(previewUrl, axiosConfig);
+                    const response = await fetchMedia(previewUrl);
                     previewBuffer = Buffer.from(response.data);
                     logger.info(`Preview GIF fetched for event ${event.id} on attempt ${attempt}`);
                     break; // Success, exit the retry loop

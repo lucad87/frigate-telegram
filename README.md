@@ -44,7 +44,7 @@ To get the Frigate-Telegram bot up and running, follow these steps:
 
 ### Environment Variables
 These variables are essential for the bot's operation and should be configured in your `docker-compose.yml` file:
-- `FRIGATE_URL`: The URL of your Frigate instance (e.g., `http://192.168.1.7:5000`, or `http://192.168.1.7:8971` when authentication is enabled).
+- `FRIGATE_URL`: The URL of your Frigate instance (e.g., `http://frigate.local:5000` for the internal unauthenticated port, or `https://frigate.local:8971` when authentication is enabled).
 - `FRIGATE_MEDIA_URL`: (Optional) The base URL used for the links in the messages (e.g., `https://your-media-frigate-instance.com`). It must be the address of the **Frigate UI as the recipients reach it**, since the link opens the event there. It falls back on `FRIGATE_URL`.
 - `FRIGATE_UI_URL`: (Optional) Overrides `FRIGATE_MEDIA_URL` for the links, when the UI lives at a different address (e.g., the UI on `https://frigate.example.com` and `FRIGATE_MEDIA_URL` pointing somewhere else).
 - `FRIGATE_USERNAME`: (Optional) Username for Frigate authentication. Required if your Frigate instance has authentication enabled.

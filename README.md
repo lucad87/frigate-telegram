@@ -15,7 +15,7 @@ This project is a Telegram bot integration for Frigate, an open-source NVR (Netw
 - [License](#license)
 
 ## About
-The application is written in Node.js and polls the Frigate API to fetch new events. When a new event is detected, it is forwarded to Telegram, including event details, a clickable video link with 30 seconds padding, a static thumbnail, and an animated preview GIF.
+The application is written in Node.js and polls the Frigate API to fetch new events. When a new event is detected, it is forwarded to Telegram, including event details, a link that opens the event in the Frigate UI, a static thumbnail, and an animated preview GIF.
 
 This project aims to retrieve events from Frigate using its API without relying on external tools like Home Assistant. MQTT is not supported.
 
@@ -28,7 +28,7 @@ https://hub.docker.com/r/lucad87/frigate-telegram
 - **Real-time Notifications**: Receive instant alerts on your Telegram chat when Frigate detects specified objects.
 - **Rich Media**: Each notification includes:
   - Event details (ID, timestamps)
-  - Clickable video link with 30 seconds padding before/after the event
+  - Clickable link that opens the event at the right moment in the Frigate UI
   - Static thumbnail image
   - Animated preview GIF
 - **Authentication Support**: Secure access to Frigate API using username and password, exchanged for a JWT token as Frigate requires.
@@ -45,7 +45,8 @@ To get the Frigate-Telegram bot up and running, follow these steps:
 ### Environment Variables
 These variables are essential for the bot's operation and should be configured in your `docker-compose.yml` file:
 - `FRIGATE_URL`: The URL of your Frigate instance (e.g., `http://192.168.1.7:5000`, or `http://192.168.1.7:8971` when authentication is enabled).
-- `FRIGATE_MEDIA_URL`: (Optional) The public URL of your Frigate media files (e.g., `https://your-media-frigate-instance.com`). It should be reachable **without authentication**, because the video links are sent to Telegram without credentials.
+- `FRIGATE_MEDIA_URL`: (Optional) The base URL used for the links in the messages (e.g., `https://your-media-frigate-instance.com`). It must be the address of the **Frigate UI as the recipients reach it**, since the link opens the event there. It falls back on `FRIGATE_URL`.
+- `FRIGATE_UI_URL`: (Optional) Overrides `FRIGATE_MEDIA_URL` for the links, when the UI lives at a different address (e.g., the UI on `https://frigate.example.com` and `FRIGATE_MEDIA_URL` pointing somewhere else).
 - `FRIGATE_USERNAME`: (Optional) Username for Frigate authentication. Required if your Frigate instance has authentication enabled.
 - `FRIGATE_PASSWORD`: (Optional) Password for Frigate authentication. Required if your Frigate instance has authentication enabled.
 - `FRIGATE_COOKIE_NAME`: (Optional) Name of the Frigate session cookie holding the JWT, `frigate_token` by default. Only needed if you changed `auth.cookie_name` in your Frigate configuration.
@@ -74,7 +75,7 @@ Notes:
 - The token is valid for Frigate's `auth.session_length` (24 hours by default) and is renewed automatically; if Frigate rejects it (for example after `FRIGATE_JWT_SECRET` changes), the bot authenticates again on the next request.
 - A `401` in the logs means Frigate is answering unauthenticated: either set the credentials for port `8971`, or move to port `5000`.
 - Port `8971` serves a **self-signed certificate** ("FRIGATE DEFAULT CERT") unless you configured TLS. Node refuses it by default, so pointing `FRIGATE_URL` at `https://<frigate-host>:8971` needs `FRIGATE_CA_CERT` (preferred) or `FRIGATE_TLS_INSECURE=true`. Reverse proxies with a valid certificate (e.g. `https://frigate.example.com`) do not need either. To get the PEM: `openssl s_client -connect <frigate-host>:8971 -servername <frigate-host> </dev/null 2>/dev/null | openssl x509 -outform PEM > frigate.pem`.
-- The video links in Telegram cannot carry credentials, so `FRIGATE_MEDIA_URL` must point at an endpoint that anyone in the chat can open. If it requires authentication, recipients who are not logged into Frigate get a `401` when they click the link: publish only the media path (for example `/api/events/*/clip.mp4`) through your reverse proxy without authentication, or accept that the links only work for users already signed in.
+- The link opens the event in the **Frigate UI** (`/review?timestamp=<camera>_<timestamp>`, the same format Frigate uses for its own recording share links) instead of the raw clip file, because `/api/events/<id>/clip.mp4` requires authentication and a link cannot carry credentials — pointing at it returned `401 Authorization Required`. Nothing needs to be published without authentication for the link to work: the viewer has to be **logged into Frigate** in their browser. Note that Frigate sends you to the Live view after a login, so a recipient without a session lands on the login page and then on the dashboard.
 
 ### Volumes
 - `./logs:/app/logs`: Mounts the logs directory to persist log files.
@@ -88,7 +89,8 @@ services:
     image: lucad87/frigate-telegram:latest
     environment:
       - FRIGATE_URL=<your-frigate-instance-url> # e.g. http://frigate:5000 (no auth) or https://frigate.example.com:8971 (JWT auth)
-      - FRIGATE_MEDIA_URL=<your-public-media-frigate-instance-url> # (optional) It fallbacks on FRIGATE_URL if not specified, it should not require authentication
+      - FRIGATE_MEDIA_URL=<your-public-media-frigate-instance-url> # (optional) Base URL for the links in the messages, it must be the Frigate UI as the recipients reach it. It fallbacks on FRIGATE_URL
+      - FRIGATE_UI_URL=<your-frigate-ui-url> # (optional) Overrides FRIGATE_MEDIA_URL for the links, only needed if the UI is at a different address
       - FRIGATE_USERNAME=<your-frigate-username> # (optional) Required if Frigate has authentication enabled (port 8971)
       - FRIGATE_PASSWORD=<your-frigate-password> # (optional) Required if Frigate has authentication enabled (port 8971)
       - FRIGATE_COOKIE_NAME=<your-frigate-cookie-name> # (optional) Only if you changed auth.cookie_name in Frigate, frigate_token is the default

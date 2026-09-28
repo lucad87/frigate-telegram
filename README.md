@@ -157,3 +157,5 @@ To set up the project for local development:
 ## License
 
 This project is licensed under the MIT License — see [LICENSE](LICENSE).
+
+This license also applies to all versions of the project published before the LICENSE file was added, and no claim is made for any use, modification or distribution that occurred before that date.

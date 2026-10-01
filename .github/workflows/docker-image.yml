@@ -94,3 +94,16 @@ jobs:
         else
           gh release create "$TAG" --title "$TAG" --generate-notes --verify-tag
         fi
+
+    # Docker Hub does not follow the repository: the image is pushed from here,
+    # not built by a Docker Hub automated build, so its description stayed on an
+    # old copy of the README. Push README.md as the repository description on
+    # every master build so the two cannot drift apart again.
+    - name: Update the Docker Hub description from the README
+      if: github.ref == 'refs/heads/master'
+      uses: peter-evans/dockerhub-description@v4
+      with:
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_TOKEN }}
+        repository: lucad87/frigate-telegram
+        readme-filepath: ./README.md
